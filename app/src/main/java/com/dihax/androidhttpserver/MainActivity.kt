@@ -17,6 +17,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,7 +26,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -40,22 +46,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
+import com.dihax.androidhttpserver.server.RequestLog
 import com.dihax.androidhttpserver.server.getLocalIpAddress
 import com.dihax.androidhttpserver.ui.theme.HTTPSERVERTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -161,17 +176,9 @@ fun ServerScreen() {
         val allGranted = permissions.values.all { it }
         hasPermissions = allGranted
         if (allGranted) {
-            Toast.makeText(
-                context,
-                "Permissions granted! You can now start the server.",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(context, "Permissions granted!", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(
-                context,
-                "Permissions required for server notifications.",
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(context, "Permissions required for server.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -180,7 +187,7 @@ fun ServerScreen() {
     }
 
     val serverRunning by activity.serverRunning.collectAsState()
-    
+
     LaunchedEffect(serverRunning) {
         isServerRunning = serverRunning
     }
@@ -188,10 +195,10 @@ fun ServerScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-
         Text(
             text = "HTTP Server",
             style = MaterialTheme.typography.headlineMedium,
@@ -210,19 +217,12 @@ fun ServerScreen() {
         )
 
         if (activity.needsManageStoragePermission()) {
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Storage Access",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Storage Access", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "File server needs access to device storage to browse files.",
+                        "File server needs access to device storage.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -249,18 +249,10 @@ fun ServerScreen() {
                     try {
                         context.startService(intent)
                     } catch (e: Exception) {
-                        Toast.makeText(
-                            context,
-                            "Failed to start server: ${e.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        Toast.makeText(context, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 } else {
-                    Toast.makeText(
-                        context,
-                        "Please grant permissions first",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(context, "Grant permissions first", Toast.LENGTH_SHORT).show()
                 }
             },
             onStopServer = {
@@ -279,44 +271,30 @@ fun ServerScreen() {
                     val clipEntry = ClipEntry(ClipData.newPlainText("serverUrl", serverUrl))
                     clipboardManager.setClipEntry(clipEntry)
                 }
+                Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
             }
         )
+
+        ActivityLogCard(isServerRunning = isServerRunning)
 
         DeveloperInfoCard()
     }
 }
 
 @Composable
-fun PermissionsCard(
-    hasPermissions: Boolean,
-    onRequestPermissions: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Permissions",
-                style = MaterialTheme.typography.titleMedium
-            )
-
+fun PermissionsCard(hasPermissions: Boolean, onRequestPermissions: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Permissions", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = if (hasPermissions) "All permissions granted" else "Permissions required",
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (hasPermissions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
             )
-
             if (!hasPermissions) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = onRequestPermissions
-                ) {
-                    Text("Grant Permissions")
-                }
+                Button(onClick = onRequestPermissions) { Text("Grant Permissions") }
             }
         }
     }
@@ -331,19 +309,10 @@ fun ServerControlsCard(
     onStartServer: () -> Unit,
     onStopServer: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Server Controls",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Server Controls", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = portText,
                 onValueChange = onPortTextChange,
@@ -351,9 +320,7 @@ fun ServerControlsCard(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -362,17 +329,12 @@ fun ServerControlsCard(
                     onClick = onStartServer,
                     modifier = Modifier.weight(1f),
                     enabled = hasPermissions && !isServerRunning
-                ) {
-                    Text("Start Server")
-                }
-
+                ) { Text("Start") }
                 Button(
                     onClick = onStopServer,
                     modifier = Modifier.weight(1f),
                     enabled = isServerRunning
-                ) {
-                    Text("Stop Server")
-                }
+                ) { Text("Stop") }
             }
         }
     }
@@ -384,80 +346,133 @@ fun ServerAddressCard(
     isServerRunning: Boolean,
     onCopyAddress: (String) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Server Address",
-                style = MaterialTheme.typography.titleMedium
-            )
-
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Server Address", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
-
             val serverUrl = "http://${getLocalIpAddress()}:$portText"
-
             Text(
                 text = serverUrl,
                 style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
-                color = if (isServerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (isServerRunning) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
             )
-
             Text(
-                text = if (isServerRunning) "Server is running" else "Server is stopped",
+                text = if (isServerRunning) "Running" else "Stopped",
                 style = MaterialTheme.typography.bodySmall,
-                color = if (isServerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (isServerRunning) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
-            TextButton(
-                onClick = { onCopyAddress(serverUrl) },
-                enabled = isServerRunning
-            ) {
+            TextButton(onClick = { onCopyAddress(serverUrl) }, enabled = isServerRunning) {
                 Text("Copy Address")
             }
         }
     }
 }
 
+@Composable
+fun ActivityLogCard(isServerRunning: Boolean) {
+    val logEntries by RequestLog.entries.collectAsState()
+    val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Activity Log", style = MaterialTheme.typography.titleMedium)
+                if (logEntries.isNotEmpty()) {
+                    TextButton(onClick = { RequestLog.clear() }) {
+                        Text("Clear", fontSize = 12.sp)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (!isServerRunning && logEntries.isEmpty()) {
+                Text(
+                    "Start the server to see activity",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (logEntries.isEmpty()) {
+                Text(
+                    "No requests yet",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    logEntries.take(20).forEach { entry ->
+                        val statusColor = when {
+                            entry.status in 200..299 -> MaterialTheme.colorScheme.primary
+                            entry.status in 400..499 -> MaterialTheme.colorScheme.error
+                            entry.status >= 500 -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = timeFormat.format(Date(entry.timestamp)),
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = entry.status.toString(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                color = statusColor
+                            )
+                            Text(
+                                text = "${entry.method} ${entry.path}",
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun DeveloperInfoCard() {
     val context = LocalContext.current
 
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Developer",
-                style = MaterialTheme.typography.titleMedium
-            )
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Developer", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(4.dp))
+            Text("Anubhav Gain", style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = "Anubhav Gain",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = "Security Software Engineer",
+                "Security Software Engineer",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
-            TextButton(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/mranv".toUri())
-                    context.startActivity(intent)
-                }
-            ) {
-                Text("GitHub: mranv")
-            }
+            TextButton(onClick = {
+                context.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/mranv".toUri()))
+            }) { Text("GitHub: mranv") }
         }
     }
 }
