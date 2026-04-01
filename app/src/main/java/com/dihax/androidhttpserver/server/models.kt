@@ -56,6 +56,17 @@ data class FileListResponse(
     val items: List<FileItem>,
 )
 
+@Serializable
+data class FileContentRequest(
+    val content: String,
+)
+
+@Serializable
+data class CreateRequest(
+    val path: String,
+    val isDirectory: Boolean = false,
+)
+
 class AssetsResourceProvider(
     private val basePath: String = "",
     private val context: Context = MyApplication.appContext,
