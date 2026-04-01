@@ -199,7 +199,7 @@ body {
 .c-name { display:flex; align-items:center; gap:10px; min-width:0; }
 .c-size { width:80px; text-align:right; color:var(--text3); white-space:nowrap; }
 .c-date { width:150px; text-align:right; color:var(--text3); white-space:nowrap; }
-.c-act { width:70px; text-align:right; white-space:nowrap; }
+.c-act { width:100px; text-align:right; white-space:nowrap; }
 
 th.c-size { text-align:right; }
 th.c-date { text-align:right; }

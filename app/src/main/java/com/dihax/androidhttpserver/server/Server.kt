@@ -336,8 +336,19 @@ fun Application.configureRouting() {
                     return@get
                 }
 
-                if (targetFile.length() > 2 * 1024 * 1024) {
-                    call.respond(BadRequest, Failure(error = "File too large to edit (max 2MB)"))
+                if (targetFile.length() > 5 * 1024 * 1024) {
+                    call.respond(BadRequest, Failure(error = "File too large to edit (max 5MB)"))
+                    return@get
+                }
+
+                // Check if file is likely text by reading first 8KB for null bytes
+                val probe = targetFile.inputStream().use { stream ->
+                    val buf = ByteArray(minOf(8192, targetFile.length().toInt()))
+                    val read = stream.read(buf)
+                    buf.copyOf(read)
+                }
+                if (probe.any { it == 0.toByte() }) {
+                    call.respond(BadRequest, Failure(error = "Binary file — cannot edit"))
                     return@get
                 }
 
