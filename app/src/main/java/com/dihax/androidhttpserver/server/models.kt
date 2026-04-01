@@ -34,6 +34,28 @@ data class Failure(
     override val success: Boolean = false,
 ) : ApiResponse<Nothing>()
 
+@Serializable
+data class LoginRequest(
+    val username: String,
+    val password: String,
+)
+
+@Serializable
+data class FileItem(
+    val name: String,
+    val path: String,
+    val isDirectory: Boolean,
+    val size: Long,
+    val lastModified: Long,
+)
+
+@Serializable
+data class FileListResponse(
+    val path: String,
+    val parent: String?,
+    val items: List<FileItem>,
+)
+
 class AssetsResourceProvider(
     private val basePath: String = "",
     private val context: Context = MyApplication.appContext,
