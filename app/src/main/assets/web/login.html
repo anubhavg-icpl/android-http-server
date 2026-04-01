@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Login - Android HTTP Server</title>
+    <link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+            </div>
+            <h1>Android HTTP Server</h1>
+            <p class="login-subtitle">Sign in to access the file server</p>
+        </div>
+
+        <form id="loginForm" autocomplete="on">
+            <div id="errorBox" class="error-box" style="display:none"></div>
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" autocomplete="username"
+                       placeholder="Enter username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" autocomplete="current-password"
+                       placeholder="Enter password" required>
+            </div>
+
+            <button type="submit" id="loginBtn" class="btn-primary">Sign In</button>
+        </form>
+    </div>
+    <p class="login-footer">Built by <a href="https://github.com/mranv" target="_blank">Anubhav Gain</a></p>
+</div>
+
+<script>
+    // Redirect if already logged in
+    fetch('/api/session').then(r => {
+        if (r.ok) window.location.href = '/files.html';
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorBox = document.getElementById('errorBox');
+        const loginBtn = document.getElementById('loginBtn');
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        errorBox.style.display = 'none';
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Signing in...';
+
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                window.location.href = '/files.html';
+            } else {
+                errorBox.textContent = data.error || 'Invalid credentials';
+                errorBox.style.display = 'block';
+            }
+        } catch (err) {
+            errorBox.textContent = 'Connection error. Is the server running?';
+            errorBox.style.display = 'block';
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Sign In';
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Files - Android HTTP Server</title>
+    <link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+    <header class="app-header">
+        <div class="header-left">
+            <h1>File Server</h1>
+        </div>
+        <div class="header-right">
+            <span id="userDisplay" class="user-badge"></span>
+            <button id="logoutBtn" class="btn-small btn-outline">Logout</button>
+        </div>
+    </header>
+
+    <nav class="breadcrumb-bar">
+        <button id="parentBtn" class="btn-icon" title="Go to parent directory" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </button>
+        <div id="breadcrumbs" class="breadcrumbs"></div>
+        <label class="toggle-hidden">
+            <input type="checkbox" id="showHidden"> Show hidden
+        </label>
+    </nav>
+
+    <div id="loading" class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading files...</span>
+    </div>
+
+    <div id="errorState" class="error-state" style="display:none">
+        <p id="errorMsg"></p>
+        <button onclick="loadFiles(currentPath)" class="btn-primary">Retry</button>
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display:none">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.4">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <p>This folder is empty</p>
+    </div>
+
+    <table id="fileTable" class="file-table" style="display:none">
+        <thead>
+            <tr>
+                <th class="col-name">Name</th>
+                <th class="col-size">Size</th>
+                <th class="col-date">Modified</th>
+            </tr>
+        </thead>
+        <tbody id="fileList"></tbody>
+    </table>
+</div>
+
+<script>
+    let currentPath = '';
+    let parentPath = null;
+
+    // Check auth on load
+    fetch('/api/session').then(r => {
+        if (!r.ok) {
+            window.location.href = '/login.html';
+            return;
+        }
+        return r.json();
+    }).then(data => {
+        if (data && data.data) {
+            document.getElementById('userDisplay').textContent = data.data.username;
+            loadFiles();
+        }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+    });
+
+    document.getElementById('parentBtn').addEventListener('click', () => {
+        if (parentPath) loadFiles(parentPath);
+    });
+
+    document.getElementById('showHidden').addEventListener('change', () => {
+        loadFiles(currentPath);
+    });
+
+    async function loadFiles(path) {
+        const loading = document.getElementById('loading');
+        const fileTable = document.getElementById('fileTable');
+        const errorState = document.getElementById('errorState');
+        const emptyState = document.getElementById('emptyState');
+
+        loading.style.display = 'flex';
+        fileTable.style.display = 'none';
+        errorState.style.display = 'none';
+        emptyState.style.display = 'none';
+
+        const showHidden = document.getElementById('showHidden').checked;
+        let url = '/api/files';
+        const params = new URLSearchParams();
+        if (path) params.set('path', path);
+        if (showHidden) params.set('showHidden', 'true');
+        if (params.toString()) url += '?' + params.toString();
+
+        try {
+            const res = await fetch(url);
+            if (res.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to load files');
+            }
+
+            const data = await res.json();
+            const fileData = data.data;
+            currentPath = fileData.path;
+            parentPath = fileData.parent;
+
+            document.getElementById('parentBtn').disabled = !parentPath;
+            renderBreadcrumbs(currentPath);
+            renderFiles(fileData.items);
+
+            loading.style.display = 'none';
+
+            if (fileData.items.length === 0) {
+                emptyState.style.display = 'flex';
+            } else {
+                fileTable.style.display = 'table';
+            }
+        } catch (err) {
+            loading.style.display = 'none';
+            document.getElementById('errorMsg').textContent = err.message;
+            errorState.style.display = 'flex';
+        }
+    }
+
+    function renderBreadcrumbs(path) {
+        const container = document.getElementById('breadcrumbs');
+        const parts = path.split('/').filter(Boolean);
+        let html = '';
+        let accumulated = '';
+
+        for (let i = 0; i < parts.length; i++) {
+            accumulated += '/' + parts[i];
+            const isLast = i === parts.length - 1;
+            if (isLast) {
+                html += '<span class="crumb-current">' + escapeHtml(parts[i]) + '</span>';
+            } else {
+                html += '<a class="crumb-link" onclick="loadFiles(\'' + escapeAttr(accumulated) + '\')">'
+                    + escapeHtml(parts[i]) + '</a>';
+                html += '<span class="crumb-sep">/</span>';
+            }
+        }
+
+        container.innerHTML = html;
+    }
+
+    function renderFiles(items) {
+        const tbody = document.getElementById('fileList');
+        tbody.innerHTML = '';
+
+        for (const item of items) {
+            const tr = document.createElement('tr');
+            tr.className = item.isDirectory ? 'row-dir' : 'row-file';
+
+            if (item.isDirectory) {
+                tr.onclick = () => loadFiles(item.path);
+                tr.style.cursor = 'pointer';
+            }
+
+            // Name cell with icon
+            const nameCell = document.createElement('td');
+            nameCell.className = 'col-name';
+            const icon = item.isDirectory ? folderIcon() : fileIcon(item.name);
+            nameCell.innerHTML = icon + '<span class="file-name">' + escapeHtml(item.name) + '</span>';
+
+            if (!item.isDirectory) {
+                const dlBtn = document.createElement('a');
+                dlBtn.href = '/api/files/download?path=' + encodeURIComponent(item.path);
+                dlBtn.className = 'download-btn';
+                dlBtn.title = 'Download';
+                dlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+                dlBtn.onclick = (e) => e.stopPropagation();
+                nameCell.appendChild(dlBtn);
+            }
+
+            // Size cell
+            const sizeCell = document.createElement('td');
+            sizeCell.className = 'col-size';
+            sizeCell.textContent = item.isDirectory ? '-' : formatSize(item.size);
+
+            // Date cell
+            const dateCell = document.createElement('td');
+            dateCell.className = 'col-date';
+            dateCell.textContent = item.lastModified > 0 ? formatDate(item.lastModified) : '-';
+
+            tr.appendChild(nameCell);
+            tr.appendChild(sizeCell);
+            tr.appendChild(dateCell);
+            tbody.appendChild(tr);
+        }
+    }
+
+    function folderIcon() {
+        return '<svg class="item-icon icon-folder" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>';
+    }
+
+    function fileIcon(name) {
+        const ext = name.split('.').pop().toLowerCase();
+        const mediaExts = ['jpg','jpeg','png','gif','bmp','webp','svg','mp4','mkv','avi','mov','mp3','wav','flac','ogg','aac'];
+        const docExts = ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv'];
+        const codeExts = ['js','ts','py','java','kt','html','css','json','xml','yaml','yml','sh','c','cpp','h','rs','go'];
+        const archiveExts = ['zip','tar','gz','rar','7z','bz2'];
+        const apkExts = ['apk','aab'];
+
+        let color = '#94a3b8';
+        if (mediaExts.includes(ext)) color = '#8b5cf6';
+        else if (docExts.includes(ext)) color = '#3b82f6';
+        else if (codeExts.includes(ext)) color = '#10b981';
+        else if (archiveExts.includes(ext)) color = '#f59e0b';
+        else if (apkExts.includes(ext)) color = '#10b981';
+
+        return '<svg class="item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+    }
+
+    function formatSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + ' ' + units[i];
+    }
+
+    function formatDate(timestamp) {
+        const d = new Date(timestamp);
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+
+        if (d.toDateString() === now.toDateString()) {
+            return 'Today ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (d.toDateString() === yesterday.toDateString()) {
+            return 'Yesterday ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+            + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+        return str.replace(/'/g, "\\'").replace(/\\/g, '\\\\');
+    }
+</script>
+</body>
+</html>
