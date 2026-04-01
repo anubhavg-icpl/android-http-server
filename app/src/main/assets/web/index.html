@@ -11,9 +11,18 @@
     <h1>Android HTTP Server</h1>
 
     <div class="endpoints">
+        <a class="endpoint" href="/files.html">File Browser</a>
         <a class="endpoint" href="/api/json">JSON</a>
         <a class="endpoint" href="/api/swagger">Swagger</a>
     </div>
 </div>
+
+<script>
+    // Auto-redirect to file browser if authenticated, or login if not
+    fetch('/api/session').then(r => {
+        if (r.ok) window.location.href = '/files.html';
+        else window.location.href = '/login.html';
+    });
+</script>
 </body>
 </html>

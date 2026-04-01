@@ -5,11 +5,473 @@
 }
 
 body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #f5f5f5;
-    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f1f5f9;
+    color: #1e293b;
     line-height: 1.5;
+    min-height: 100vh;
 }
+
+/* ── Login page ────────────────────────────────────────── */
+
+.login-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+    background: linear-gradient(135deg, #e0e7ff 0%, #f1f5f9 50%, #dbeafe 100%);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    background: #eef2ff;
+    color: #4f46e5;
+    margin-bottom: 1rem;
+}
+
+.login-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.login-subtitle {
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.375rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 1rem;
+    color: #1e293b;
+    background: #fafbfc;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+}
+
+.form-group input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    background: white;
+}
+
+.form-group input::placeholder {
+    color: #9ca3af;
+}
+
+.error-box {
+    padding: 0.75rem 1rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #dc2626;
+    font-size: 0.875rem;
+    margin-bottom: 1.25rem;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+    background: #a5b4fc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.8125rem;
+    color: #94a3b8;
+}
+
+.login-footer a {
+    color: #4f46e5;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.login-footer a:hover {
+    text-decoration: underline;
+}
+
+/* ── File browser layout ───────────────────────────────── */
+
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1.5rem;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.header-left h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #4f46e5;
+    background: #eef2ff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+}
+
+.btn-small {
+    padding: 0.375rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #64748b;
+    border: 1.5px solid #e2e8f0;
+}
+
+.btn-outline:hover {
+    color: #dc2626;
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+/* ── Breadcrumbs ───────────────────────────────────────── */
+
+.breadcrumb-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-x: auto;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+}
+
+.btn-icon:hover:not(:disabled) {
+    color: #4f46e5;
+    border-color: #c7d2fe;
+    background: #eef2ff;
+}
+
+.btn-icon:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    font-size: 0.8125rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.crumb-link {
+    color: #4f46e5;
+    cursor: pointer;
+    padding: 0.125rem 0.25rem;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.crumb-link:hover {
+    background: #eef2ff;
+}
+
+.crumb-sep {
+    color: #cbd5e1;
+    margin: 0 0.125rem;
+}
+
+.crumb-current {
+    color: #1e293b;
+    font-weight: 600;
+    padding: 0.125rem 0.25rem;
+}
+
+.toggle-hidden {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.toggle-hidden input {
+    accent-color: #4f46e5;
+}
+
+/* ── File table ────────────────────────────────────────── */
+
+.file-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.file-table thead {
+    position: sticky;
+    top: 53px;
+    z-index: 5;
+}
+
+.file-table th {
+    padding: 0.625rem 1.5rem;
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.file-table td {
+    padding: 0.5rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+}
+
+.file-table tr:hover {
+    background: #f8fafc;
+}
+
+.row-dir:hover {
+    background: #eef2ff;
+}
+
+.col-name {
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+th.col-size,
+td.col-size {
+    width: 100px;
+    text-align: right;
+    color: #64748b;
+}
+
+th.col-date,
+td.col-date {
+    width: 180px;
+    text-align: right;
+    color: #64748b;
+}
+
+.item-icon {
+    flex-shrink: 0;
+}
+
+.icon-folder {
+    color: #f59e0b;
+}
+
+.file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.row-dir .file-name {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.row-file .file-name {
+    color: #475569;
+}
+
+.download-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: #94a3b8;
+    margin-left: auto;
+    flex-shrink: 0;
+    transition: all 0.15s;
+}
+
+.download-btn:hover {
+    color: #4f46e5;
+    background: #eef2ff;
+}
+
+/* ── States ────────────────────────────────────────────── */
+
+.loading-state,
+.error-state,
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    gap: 1rem;
+    color: #64748b;
+    font-size: 0.9375rem;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.error-state {
+    color: #dc2626;
+}
+
+.error-state .btn-primary {
+    width: auto;
+    margin-top: 0.5rem;
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+    .login-card {
+        padding: 2rem 1.5rem;
+    }
+
+    .app-header {
+        padding: 0.75rem 1rem;
+    }
+
+    .breadcrumb-bar {
+        padding: 0.5rem 1rem;
+    }
+
+    .file-table th,
+    .file-table td {
+        padding: 0.5rem 1rem;
+    }
+
+    th.col-date,
+    td.col-date {
+        display: none;
+    }
+
+    th.col-size,
+    td.col-size {
+        width: 70px;
+    }
+}
+
+/* ── Old index page (kept for API links) ───────────────── */
 
 .container {
     max-width: 600px;
@@ -18,10 +480,10 @@ body {
     text-align: center;
 }
 
-h1 {
+.container h1 {
     font-size: 2rem;
     margin-bottom: 2rem;
-    color: #2563eb;
+    color: #4f46e5;
 }
 
 .endpoints {
@@ -36,28 +498,17 @@ h1 {
     display: block;
     padding: 1rem;
     background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     text-decoration: none;
-    color: #333;
+    color: #1e293b;
     font-weight: 500;
     transition: all 0.2s ease;
 }
 
 .endpoint:hover {
-    background: #2563eb;
+    background: #4f46e5;
     color: white;
-    border-color: #2563eb;
+    border-color: #4f46e5;
     transform: translateY(-1px);
-}
-
-@media (max-width: 480px) {
-    .container {
-        margin: 1rem;
-        padding: 1rem;
-    }
-    
-    h1 {
-        font-size: 1.5rem;
-    }
 }
