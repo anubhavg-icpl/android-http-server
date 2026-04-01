@@ -449,7 +449,7 @@ fun Application.configureRouting() {
             }
 
             get("/status", {
-                description = "Checks the health/status of the API"
+                description = "Checks the health/status of the Phylax API"
             }) {
                 call.respond(
                     Success(

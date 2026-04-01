@@ -110,7 +110,7 @@ class HttpServerService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "HTTP Server",
+                "Phylax",
                 NotificationManager.IMPORTANCE_LOW
             )
             val notificationManager =
@@ -127,7 +127,7 @@ class HttpServerService : Service() {
         )
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("HTTP Server")
+            .setContentTitle("Phylax")
             .setContentText(message)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
