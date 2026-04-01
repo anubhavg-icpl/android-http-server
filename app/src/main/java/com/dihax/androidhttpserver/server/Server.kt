@@ -1,9 +1,14 @@
 package com.dihax.androidhttpserver.server
 
+import android.os.Environment
 import io.github.smiley4.ktoropenapi.OpenApi
 import io.github.smiley4.ktoropenapi.get
 import io.github.smiley4.ktoropenapi.openApi
 import io.github.smiley4.ktorswaggerui.swaggerUI
+import io.ktor.http.ContentDisposition
+import io.ktor.http.Cookie
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.HttpStatusCode.Companion.BadRequest
 import io.ktor.http.HttpStatusCode.Companion.Conflict
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
@@ -22,14 +27,19 @@ import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
+import io.ktor.server.request.receive
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondFile
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import org.slf4j.event.Level
+import java.io.File
 
 typealias CIOEmbeddedServer = EmbeddedServer<CIOApplicationEngine, Configuration>
 
@@ -81,7 +91,8 @@ fun Application.configureServer() {
                                 "message" to it.message
                             )
                         }
-                    ).toString())
+                    ).toString()
+                )
             )
         }
         status(NotFound) { call, status ->
@@ -116,6 +127,120 @@ fun Application.configureRouting() {
 
     routing {
         route("/api") {
+            post("/login") {
+                val request = call.receive<LoginRequest>()
+                val token = SessionManager.login(request.username, request.password)
+                if (token != null) {
+                    call.response.cookies.append(Cookie("session", token, path = "/"))
+                    call.respond(Success(data = mapOf("username" to request.username)))
+                } else {
+                    call.respond(
+                        HttpStatusCode.Unauthorized,
+                        Failure(error = "Invalid username or password")
+                    )
+                }
+            }
+
+            post("/logout") {
+                val token = call.request.cookies["session"]
+                if (token != null) SessionManager.logout(token)
+                call.response.cookies.append(Cookie("session", "", path = "/", maxAge = 0))
+                call.respond(Success(data = mapOf("message" to "Logged out")))
+            }
+
+            get("/session") {
+                val token = call.request.cookies["session"]
+                if (token != null && SessionManager.isValid(token)) {
+                    call.respond(
+                        Success(
+                            data = mapOf("username" to (SessionManager.getUsername(token) ?: ""))
+                        )
+                    )
+                } else {
+                    call.respond(
+                        HttpStatusCode.Unauthorized,
+                        Failure(error = "Not authenticated")
+                    )
+                }
+            }
+
+            get("/files") {
+                call.requireAuth() ?: return@get
+
+                val rootDir = Environment.getExternalStorageDirectory().canonicalFile
+                val requestedPath = call.request.queryParameters["path"] ?: rootDir.absolutePath
+                val showHidden = call.request.queryParameters["showHidden"] == "true"
+                val targetDir = File(requestedPath).canonicalFile
+
+                if (!targetDir.absolutePath.startsWith(rootDir.absolutePath)) {
+                    call.respond(HttpStatusCode.Forbidden, Failure(error = "Access denied"))
+                    return@get
+                }
+
+                if (!targetDir.exists() || !targetDir.isDirectory) {
+                    call.respond(NotFound, Failure(error = "Directory not found"))
+                    return@get
+                }
+
+                val items = targetDir.listFiles()
+                    ?.filter { showHidden || !it.name.startsWith(".") }
+                    ?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+                    ?.map { file ->
+                        FileItem(
+                            name = file.name,
+                            path = file.absolutePath,
+                            isDirectory = file.isDirectory,
+                            size = if (file.isFile) file.length() else 0,
+                            lastModified = file.lastModified(),
+                        )
+                    } ?: emptyList()
+
+                val parent = if (targetDir.absolutePath != rootDir.absolutePath) {
+                    targetDir.parent
+                } else null
+
+                call.respond(
+                    Success(
+                        data = FileListResponse(
+                            path = targetDir.absolutePath,
+                            parent = parent,
+                            items = items,
+                        )
+                    )
+                )
+            }
+
+            get("/files/download") {
+                call.requireAuth() ?: return@get
+
+                val requestedPath = call.request.queryParameters["path"]
+                if (requestedPath == null) {
+                    call.respond(BadRequest, Failure(error = "Path parameter required"))
+                    return@get
+                }
+
+                val rootDir = Environment.getExternalStorageDirectory().canonicalFile
+                val targetFile = File(requestedPath).canonicalFile
+
+                if (!targetFile.absolutePath.startsWith(rootDir.absolutePath)) {
+                    call.respond(HttpStatusCode.Forbidden, Failure(error = "Access denied"))
+                    return@get
+                }
+
+                if (!targetFile.exists() || !targetFile.isFile) {
+                    call.respond(NotFound, Failure(error = "File not found"))
+                    return@get
+                }
+
+                call.response.header(
+                    HttpHeaders.ContentDisposition,
+                    ContentDisposition.Attachment.withParameter(
+                        ContentDisposition.Parameters.FileName, targetFile.name
+                    ).toString()
+                )
+                call.respondFile(targetFile)
+            }
+
             get("/status", {
                 description = "Checks the health/status of the API"
             }) {
@@ -139,13 +264,16 @@ fun Application.configureRouting() {
         }
 
         get {
-            call.respondRedirect("/index.html", permanent = false)
+            call.respondRedirect("/files.html", permanent = false)
         }
 
         get("/{file...}") {
             val path = call.parameters.getAll("file")?.joinToString("/")
-            if (path == null) call.respond(NotFound)
-            val resource = webFiles.getResource(path!!)
+            if (path == null) {
+                call.respond(NotFound)
+                return@get
+            }
+            val resource = webFiles.getResource(path)
             if (resource != null) call.respondAssetNoCache(resource)
             else call.respond(NotFound)
         }
