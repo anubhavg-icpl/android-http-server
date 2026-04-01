@@ -131,7 +131,20 @@ fun Application.configureServer() {
         }
         format { call ->
             val userAgent = call.request.headers["User-Agent"] ?: "unknown"
-            "Method: ${call.request.httpMethod.value}, Path: ${call.request.path()}, User-Agent: $userAgent"
+            val method = call.request.httpMethod.value
+            val path = call.request.path()
+            val status = call.response.status()?.value ?: 0
+
+            RequestLog.add(
+                LogEntry(
+                    method = method,
+                    path = path,
+                    status = status,
+                    userAgent = userAgent,
+                )
+            )
+
+            "Method: $method, Path: $path, Status: $status, User-Agent: $userAgent"
         }
     }
 }
@@ -294,7 +307,12 @@ fun Application.configureRouting() {
                 }
 
                 call.respond(
-                    Success(data = mapOf("uploaded" to uploadedFiles, "count" to uploadedFiles.size.toString()))
+                    Success(
+                        data = mapOf(
+                            "uploaded" to uploadedFiles.joinToString(", "),
+                            "count" to uploadedFiles.size.toString()
+                        )
+                    )
                 )
             }
 
