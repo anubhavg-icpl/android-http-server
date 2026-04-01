@@ -3,269 +3,342 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta name="theme-color" content="#000000">
     <title>Files - Android HTTP Server</title>
     <link href="style.css" rel="stylesheet">
 </head>
-<body>
-<div class="app-layout">
-    <header class="app-header">
-        <div class="header-left">
-            <h1>File Server</h1>
-        </div>
-        <div class="header-right">
-            <span id="userDisplay" class="user-badge"></span>
-            <button id="logoutBtn" class="btn-small btn-outline">Logout</button>
-        </div>
-    </header>
+<body class="page-files">
 
-    <nav class="breadcrumb-bar">
-        <button id="parentBtn" class="btn-icon" title="Go to parent directory" disabled>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
-            </svg>
+<!-- ── Top bar ─────────────────────────────────────────── -->
+<header class="topbar">
+    <h1 class="topbar-title">File Server</h1>
+    <div class="topbar-actions">
+        <span id="userBadge" class="badge"></span>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm">Logout</button>
+    </div>
+</header>
+
+<!-- ── Toolbar ─────────────────────────────────────────── -->
+<nav class="toolbar">
+    <button id="parentBtn" class="btn btn-icon" title="Parent" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div id="breadcrumbs" class="crumbs"></div>
+    <div class="toolbar-right">
+        <label class="toggle"><input type="checkbox" id="showHidden"><span>Hidden</span></label>
+        <button id="newFolderBtn" class="btn btn-ghost btn-sm" title="New folder">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+            <span class="hide-xs">New Folder</span>
         </button>
-        <div id="breadcrumbs" class="breadcrumbs"></div>
-        <label class="toggle-hidden">
-            <input type="checkbox" id="showHidden"> Show hidden
-        </label>
-    </nav>
-
-    <div id="loading" class="loading-state">
-        <div class="spinner"></div>
-        <span>Loading files...</span>
+        <button id="newFileBtn" class="btn btn-ghost btn-sm" title="New file">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span class="hide-xs">New File</span>
+        </button>
+        <button id="uploadBtn" class="btn btn-accent btn-sm" title="Upload">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            <span class="hide-xs">Upload</span>
+        </button>
+        <input type="file" id="fileInput" multiple style="display:none">
     </div>
+</nav>
 
-    <div id="errorState" class="error-state" style="display:none">
-        <p id="errorMsg"></p>
-        <button onclick="loadFiles(currentPath)" class="btn-primary">Retry</button>
+<!-- ── Drop zone overlay ───────────────────────────────── -->
+<div id="dropZone" class="drop-zone">
+    <div class="drop-zone-inner">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        <p>Drop files to upload</p>
     </div>
-
-    <div id="emptyState" class="empty-state" style="display:none">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.4">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        </svg>
-        <p>This folder is empty</p>
-    </div>
-
-    <table id="fileTable" class="file-table" style="display:none">
-        <thead>
-            <tr>
-                <th class="col-name">Name</th>
-                <th class="col-size">Size</th>
-                <th class="col-date">Modified</th>
-            </tr>
-        </thead>
-        <tbody id="fileList"></tbody>
-    </table>
 </div>
 
+<!-- ── States ──────────────────────────────────────────── -->
+<div id="loading" class="state"><div class="spinner"></div><span>Loading&hellip;</span></div>
+<div id="errorState" class="state state-error" style="display:none"><p id="errorMsg"></p><button onclick="loadFiles(currentPath)" class="btn btn-accent btn-sm">Retry</button></div>
+<div id="emptyState" class="state" style="display:none">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    <p>Empty folder</p>
+</div>
+
+<!-- ── File table ──────────────────────────────────────── -->
+<div id="tableWrap" class="table-wrap" style="display:none">
+<table class="ftable">
+    <thead><tr>
+        <th class="c-name">Name</th>
+        <th class="c-size">Size</th>
+        <th class="c-date">Modified</th>
+        <th class="c-act"></th>
+    </tr></thead>
+    <tbody id="fileList"></tbody>
+</table>
+</div>
+
+<!-- ── Editor modal ────────────────────────────────────── -->
+<div id="editorModal" class="modal" style="display:none">
+    <div class="modal-content editor-modal">
+        <div class="modal-header">
+            <h2 id="editorTitle">Edit File</h2>
+            <button onclick="closeEditor()" class="btn btn-icon">&times;</button>
+        </div>
+        <textarea id="editorArea" class="editor-textarea" spellcheck="false"></textarea>
+        <div class="modal-footer">
+            <button onclick="closeEditor()" class="btn btn-ghost btn-sm">Cancel</button>
+            <button onclick="saveFile()" id="saveBtn" class="btn btn-accent btn-sm">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Create modal ────────────────────────────────────── -->
+<div id="createModal" class="modal" style="display:none">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="createTitle">New File</h2>
+            <button onclick="closeCreate()" class="btn btn-icon">&times;</button>
+        </div>
+        <div class="field">
+            <label for="createName">Name</label>
+            <input type="text" id="createName" placeholder="filename.txt">
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeCreate()" class="btn btn-ghost btn-sm">Cancel</button>
+            <button onclick="doCreate()" id="createBtn" class="btn btn-accent btn-sm">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Toast ───────────────────────────────────────────── -->
+<div id="toast" class="toast"></div>
+
 <script>
-    let currentPath = '';
-    let parentPath = null;
+let currentPath = '';
+let parentPath = null;
+let editingPath = '';
+let createIsDir = false;
 
-    // Check auth on load
-    fetch('/api/session').then(r => {
-        if (!r.ok) {
-            window.location.href = '/login.html';
-            return;
-        }
-        return r.json();
-    }).then(data => {
-        if (data && data.data) {
-            document.getElementById('userDisplay').textContent = data.data.username;
-            loadFiles();
-        }
-    });
+// ── Auth ──────────────────────────────────────────────
+fetch('/api/session').then(r => {
+    if (!r.ok) { window.location.href = '/login.html'; return null; }
+    return r.json();
+}).then(d => { if (d?.data) { document.getElementById('userBadge').textContent = d.data.username; loadFiles(); } });
 
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-        await fetch('/api/logout', { method: 'POST' });
-        window.location.href = '/login.html';
-    });
+document.getElementById('logoutBtn').onclick = async () => { await fetch('/api/logout',{method:'POST'}); window.location.href='/login.html'; };
 
-    document.getElementById('parentBtn').addEventListener('click', () => {
-        if (parentPath) loadFiles(parentPath);
-    });
+// ── Navigation ────────────────────────────────────────
+document.getElementById('parentBtn').onclick = () => { if (parentPath) loadFiles(parentPath); };
+document.getElementById('showHidden').onchange = () => loadFiles(currentPath);
 
-    document.getElementById('showHidden').addEventListener('change', () => {
-        loadFiles(currentPath);
-    });
+// ── Upload ────────────────────────────────────────────
+document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = (e) => uploadFiles(e.target.files);
 
-    async function loadFiles(path) {
-        const loading = document.getElementById('loading');
-        const fileTable = document.getElementById('fileTable');
-        const errorState = document.getElementById('errorState');
-        const emptyState = document.getElementById('emptyState');
+// Drag and drop
+let dragCount = 0;
+const dz = document.getElementById('dropZone');
+document.addEventListener('dragenter', (e) => { e.preventDefault(); dragCount++; dz.classList.add('active'); });
+document.addEventListener('dragleave', (e) => { e.preventDefault(); dragCount--; if (dragCount<=0){dragCount=0;dz.classList.remove('active');} });
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => { e.preventDefault(); dragCount=0; dz.classList.remove('active'); if(e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files); });
 
-        loading.style.display = 'flex';
-        fileTable.style.display = 'none';
-        errorState.style.display = 'none';
-        emptyState.style.display = 'none';
+async function uploadFiles(files) {
+    const form = new FormData();
+    for (const f of files) form.append('files', f, f.name);
+    toast('Uploading ' + files.length + ' file(s)\u2026');
+    try {
+        const res = await fetch('/api/files/upload?path=' + encodeURIComponent(currentPath), { method:'POST', body:form });
+        if (res.status===401) { window.location.href='/login.html'; return; }
+        const data = await res.json();
+        if (res.ok) { toast(data.data.count + ' file(s) uploaded'); loadFiles(currentPath); }
+        else toast(data.error||'Upload failed','error');
+    } catch(_) { toast('Upload failed','error'); }
+    document.getElementById('fileInput').value = '';
+}
 
-        const showHidden = document.getElementById('showHidden').checked;
-        let url = '/api/files';
-        const params = new URLSearchParams();
-        if (path) params.set('path', path);
-        if (showHidden) params.set('showHidden', 'true');
-        if (params.toString()) url += '?' + params.toString();
+// ── Create ────────────────────────────────────────────
+document.getElementById('newFileBtn').onclick = () => { createIsDir=false; document.getElementById('createTitle').textContent='New File'; document.getElementById('createName').placeholder='filename.txt'; document.getElementById('createModal').style.display='flex'; document.getElementById('createName').focus(); };
+document.getElementById('newFolderBtn').onclick = () => { createIsDir=true; document.getElementById('createTitle').textContent='New Folder'; document.getElementById('createName').placeholder='folder-name'; document.getElementById('createModal').style.display='flex'; document.getElementById('createName').focus(); };
 
-        try {
-            const res = await fetch(url);
-            if (res.status === 401) {
-                window.location.href = '/login.html';
-                return;
-            }
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Failed to load files');
-            }
+function closeCreate() { document.getElementById('createModal').style.display='none'; document.getElementById('createName').value=''; }
 
-            const data = await res.json();
-            const fileData = data.data;
-            currentPath = fileData.path;
-            parentPath = fileData.parent;
+async function doCreate() {
+    const name = document.getElementById('createName').value.trim();
+    if (!name) return;
+    const fullPath = currentPath + '/' + name;
+    try {
+        const res = await fetch('/api/files/create', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ path: fullPath, isDirectory: createIsDir })
+        });
+        if (res.status===401) { window.location.href='/login.html'; return; }
+        const data = await res.json();
+        if (res.ok) { toast('Created ' + name); closeCreate(); loadFiles(currentPath); }
+        else toast(data.error||'Failed','error');
+    } catch(_) { toast('Failed to create','error'); }
+}
 
-            document.getElementById('parentBtn').disabled = !parentPath;
-            renderBreadcrumbs(currentPath);
-            renderFiles(fileData.items);
+// ── Editor ────────────────────────────────────────────
+async function openEditor(path, name) {
+    editingPath = path;
+    document.getElementById('editorTitle').textContent = name;
+    document.getElementById('editorArea').value = 'Loading\u2026';
+    document.getElementById('editorModal').style.display = 'flex';
+    try {
+        const res = await fetch('/api/files/content?path=' + encodeURIComponent(path));
+        if (res.status===401) { window.location.href='/login.html'; return; }
+        if (!res.ok) { const d = await res.json(); toast(d.error||'Cannot open','error'); closeEditor(); return; }
+        document.getElementById('editorArea').value = await res.text();
+    } catch(_) { toast('Failed to load file','error'); closeEditor(); }
+}
 
-            loading.style.display = 'none';
+function closeEditor() { document.getElementById('editorModal').style.display='none'; editingPath=''; }
 
-            if (fileData.items.length === 0) {
-                emptyState.style.display = 'flex';
-            } else {
-                fileTable.style.display = 'table';
-            }
-        } catch (err) {
-            loading.style.display = 'none';
-            document.getElementById('errorMsg').textContent = err.message;
-            errorState.style.display = 'flex';
-        }
+async function saveFile() {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = 'Saving\u2026';
+    try {
+        const res = await fetch('/api/files/content?path=' + encodeURIComponent(editingPath), {
+            method:'PUT', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ content: document.getElementById('editorArea').value })
+        });
+        if (res.status===401) { window.location.href='/login.html'; return; }
+        const data = await res.json();
+        if (res.ok) { toast('Saved'); closeEditor(); loadFiles(currentPath); }
+        else toast(data.error||'Save failed','error');
+    } catch(_) { toast('Save failed','error'); }
+    finally { btn.disabled=false; btn.textContent='Save'; }
+}
+
+// ── Delete ────────────────────────────────────────────
+async function deleteItem(path, name) {
+    if (!confirm('Delete "' + name + '"?')) return;
+    try {
+        const res = await fetch('/api/files?path=' + encodeURIComponent(path), { method:'DELETE' });
+        if (res.status===401) { window.location.href='/login.html'; return; }
+        const data = await res.json();
+        if (res.ok) { toast('Deleted ' + name); loadFiles(currentPath); }
+        else toast(data.error||'Delete failed','error');
+    } catch(_) { toast('Delete failed','error'); }
+}
+
+// ── File list ─────────────────────────────────────────
+async function loadFiles(path) {
+    show('loading'); hide('tableWrap','errorState','emptyState');
+    const showHidden = document.getElementById('showHidden').checked;
+    let url = '/api/files';
+    const p = new URLSearchParams();
+    if (path) p.set('path', path);
+    if (showHidden) p.set('showHidden','true');
+    if (p.toString()) url += '?' + p;
+
+    try {
+        const res = await fetch(url);
+        if (res.status===401) { window.location.href='/login.html'; return; }
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error||'Failed'); }
+        const data = await res.json();
+        const fd = data.data;
+        currentPath = fd.path; parentPath = fd.parent;
+        document.getElementById('parentBtn').disabled = !parentPath;
+        renderCrumbs(currentPath);
+        renderFiles(fd.items);
+        hide('loading');
+        if (fd.items.length===0) show('emptyState'); else show('tableWrap');
+    } catch(e) { hide('loading'); document.getElementById('errorMsg').textContent=e.message; show('errorState'); }
+}
+
+function renderCrumbs(path) {
+    const el = document.getElementById('breadcrumbs');
+    const parts = path.split('/').filter(Boolean);
+    let html = '', acc = '';
+    for (let i=0;i<parts.length;i++) {
+        acc += '/' + parts[i];
+        if (i===parts.length-1) html += '<span class="crumb-cur">' + esc(parts[i]) + '</span>';
+        else html += '<a class="crumb-link" onclick="loadFiles(\'' + acc.replace(/'/g,"\\'") + '\')">' + esc(parts[i]) + '</a><span class="crumb-sep">/</span>';
     }
+    el.innerHTML = html;
+}
 
-    function renderBreadcrumbs(path) {
-        const container = document.getElementById('breadcrumbs');
-        const parts = path.split('/').filter(Boolean);
-        let html = '';
-        let accumulated = '';
+function renderFiles(items) {
+    const tb = document.getElementById('fileList');
+    tb.innerHTML = '';
+    for (const it of items) {
+        const tr = document.createElement('tr');
+        tr.className = it.isDirectory ? 'row-dir' : 'row-file';
 
-        for (let i = 0; i < parts.length; i++) {
-            accumulated += '/' + parts[i];
-            const isLast = i === parts.length - 1;
-            if (isLast) {
-                html += '<span class="crumb-current">' + escapeHtml(parts[i]) + '</span>';
-            } else {
-                html += '<a class="crumb-link" onclick="loadFiles(\'' + escapeAttr(accumulated) + '\')">'
-                    + escapeHtml(parts[i]) + '</a>';
-                html += '<span class="crumb-sep">/</span>';
-            }
-        }
-
-        container.innerHTML = html;
-    }
-
-    function renderFiles(items) {
-        const tbody = document.getElementById('fileList');
-        tbody.innerHTML = '';
-
-        for (const item of items) {
-            const tr = document.createElement('tr');
-            tr.className = item.isDirectory ? 'row-dir' : 'row-file';
-
-            if (item.isDirectory) {
-                tr.onclick = () => loadFiles(item.path);
-                tr.style.cursor = 'pointer';
-            }
-
-            // Name cell with icon
-            const nameCell = document.createElement('td');
-            nameCell.className = 'col-name';
-            const icon = item.isDirectory ? folderIcon() : fileIcon(item.name);
-            nameCell.innerHTML = icon + '<span class="file-name">' + escapeHtml(item.name) + '</span>';
-
-            if (!item.isDirectory) {
-                const dlBtn = document.createElement('a');
-                dlBtn.href = '/api/files/download?path=' + encodeURIComponent(item.path);
-                dlBtn.className = 'download-btn';
-                dlBtn.title = 'Download';
-                dlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
-                dlBtn.onclick = (e) => e.stopPropagation();
-                nameCell.appendChild(dlBtn);
-            }
-
-            // Size cell
-            const sizeCell = document.createElement('td');
-            sizeCell.className = 'col-size';
-            sizeCell.textContent = item.isDirectory ? '-' : formatSize(item.size);
-
-            // Date cell
-            const dateCell = document.createElement('td');
-            dateCell.className = 'col-date';
-            dateCell.textContent = item.lastModified > 0 ? formatDate(item.lastModified) : '-';
-
-            tr.appendChild(nameCell);
-            tr.appendChild(sizeCell);
-            tr.appendChild(dateCell);
-            tbody.appendChild(tr);
-        }
-    }
-
-    function folderIcon() {
-        return '<svg class="item-icon icon-folder" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>';
-    }
-
-    function fileIcon(name) {
-        const ext = name.split('.').pop().toLowerCase();
-        const mediaExts = ['jpg','jpeg','png','gif','bmp','webp','svg','mp4','mkv','avi','mov','mp3','wav','flac','ogg','aac'];
-        const docExts = ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv'];
-        const codeExts = ['js','ts','py','java','kt','html','css','json','xml','yaml','yml','sh','c','cpp','h','rs','go'];
-        const archiveExts = ['zip','tar','gz','rar','7z','bz2'];
-        const apkExts = ['apk','aab'];
-
-        let color = '#94a3b8';
-        if (mediaExts.includes(ext)) color = '#8b5cf6';
-        else if (docExts.includes(ext)) color = '#3b82f6';
-        else if (codeExts.includes(ext)) color = '#10b981';
-        else if (archiveExts.includes(ext)) color = '#f59e0b';
-        else if (apkExts.includes(ext)) color = '#10b981';
-
-        return '<svg class="item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
-    }
-
-    function formatSize(bytes) {
-        if (bytes === 0) return '0 B';
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + ' ' + units[i];
-    }
-
-    function formatDate(timestamp) {
-        const d = new Date(timestamp);
-        const now = new Date();
-        const pad = (n) => String(n).padStart(2, '0');
-
-        if (d.toDateString() === now.toDateString()) {
-            return 'Today ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        // Name
+        const td1 = document.createElement('td');
+        td1.className = 'c-name';
+        td1.innerHTML = (it.isDirectory ? iconFolder() : iconFile(it.name)) + '<span class="fname">' + esc(it.name) + '</span>';
+        if (it.isDirectory) { td1.style.cursor='pointer'; td1.onclick = () => loadFiles(it.path); }
+        else {
+            const editable = isEditable(it.name);
+            if (editable) { td1.style.cursor='pointer'; td1.onclick = () => openEditor(it.path, it.name); }
         }
 
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-        if (d.toDateString() === yesterday.toDateString()) {
-            return 'Yesterday ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        // Size
+        const td2 = document.createElement('td');
+        td2.className = 'c-size';
+        td2.textContent = it.isDirectory ? '\u2014' : fmtSize(it.size);
+
+        // Date
+        const td3 = document.createElement('td');
+        td3.className = 'c-date';
+        td3.textContent = it.lastModified > 0 ? fmtDate(it.lastModified) : '\u2014';
+
+        // Actions
+        const td4 = document.createElement('td');
+        td4.className = 'c-act';
+        if (!it.isDirectory) {
+            const dl = document.createElement('a');
+            dl.href = '/api/files/download?path=' + encodeURIComponent(it.path);
+            dl.className = 'act-btn'; dl.title = 'Download';
+            dl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+            dl.onclick = (e) => e.stopPropagation();
+            td4.appendChild(dl);
         }
+        const del = document.createElement('button');
+        del.className = 'act-btn act-del'; del.title = 'Delete';
+        del.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        del.onclick = (e) => { e.stopPropagation(); deleteItem(it.path, it.name); };
+        td4.appendChild(del);
 
-        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-            + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        tr.append(td1, td2, td3, td4);
+        tb.appendChild(tr);
     }
+}
 
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
+// ── Helpers ───────────────────────────────────────────
+const EDIT_EXTS = ['txt','md','json','xml','yaml','yml','html','css','js','ts','py','java','kt','kts','c','cpp','h','rs','go','sh','bash','zsh','toml','ini','cfg','conf','log','csv','properties','gradle','pro','gitignore','env','dockerfile','makefile'];
+function isEditable(name) { const ext = name.split('.').pop().toLowerCase(); return EDIT_EXTS.includes(ext) || name.startsWith('.'); }
 
-    function escapeAttr(str) {
-        return str.replace(/'/g, "\\'").replace(/\\/g, '\\\\');
-    }
+function iconFolder() { return '<svg class="ficon ic-folder" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>'; }
+function iconFile(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    const colors = {jpg:'#a78bfa',jpeg:'#a78bfa',png:'#a78bfa',gif:'#a78bfa',webp:'#a78bfa',svg:'#a78bfa',mp4:'#c084fc',mkv:'#c084fc',mov:'#c084fc',mp3:'#c084fc',wav:'#c084fc',flac:'#c084fc',pdf:'#f87171',doc:'#60a5fa',docx:'#60a5fa',xls:'#34d399',xlsx:'#34d399',zip:'#fbbf24',tar:'#fbbf24',gz:'#fbbf24',rar:'#fbbf24','7z':'#fbbf24',apk:'#34d399',js:'#fbbf24',ts:'#60a5fa',py:'#34d399',java:'#f87171',kt:'#a78bfa',rs:'#f97316',go:'#60a5fa',html:'#f87171',css:'#60a5fa',json:'#fbbf24',xml:'#f97316',sh:'#34d399'};
+    const c = colors[ext] || '#525252';
+    return '<svg class="ficon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+}
+
+function fmtSize(b) { if(!b) return '0 B'; const u=['B','KB','MB','GB','TB']; const i=Math.floor(Math.log(b)/Math.log(1024)); return parseFloat((b/Math.pow(1024,i)).toFixed(1))+' '+u[i]; }
+function fmtDate(ts) {
+    const d=new Date(ts), n=new Date(), pad=n=>String(n).padStart(2,'0');
+    const time = pad(d.getHours())+':'+pad(d.getMinutes());
+    if (d.toDateString()===n.toDateString()) return 'Today '+time;
+    const y=new Date(n); y.setDate(y.getDate()-1);
+    if (d.toDateString()===y.toDateString()) return 'Yesterday '+time;
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+time;
+}
+
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function show(id) { document.getElementById(id).style.display='flex'; }
+function hide(...ids) { ids.forEach(id => document.getElementById(id).style.display='none'); }
+
+function toast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type==='error'?' toast-error':'');
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.className='toast', 2500);
+}
+
+// Enter key in create modal
+document.getElementById('createName').addEventListener('keydown', (e) => { if(e.key==='Enter'){e.preventDefault();doCreate();} });
 </script>
 </body>
 </html>

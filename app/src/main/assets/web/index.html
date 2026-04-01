@@ -3,22 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta name="theme-color" content="#000000">
     <title>Android HTTP Server</title>
     <link href="style.css" rel="stylesheet">
 </head>
 <body>
 <div class="container">
     <h1>Android HTTP Server</h1>
-
     <div class="endpoints">
         <a class="endpoint" href="/files.html">File Browser</a>
-        <a class="endpoint" href="/api/json">JSON</a>
+        <a class="endpoint" href="/api/json">API Spec</a>
         <a class="endpoint" href="/api/swagger">Swagger</a>
     </div>
 </div>
-
 <script>
-    // Auto-redirect to file browser if authenticated, or login if not
     fetch('/api/session').then(r => {
         if (r.ok) window.location.href = '/files.html';
         else window.location.href = '/login.html';
