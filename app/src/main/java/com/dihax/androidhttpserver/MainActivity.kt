@@ -6,9 +6,12 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.IBinder
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -107,13 +110,36 @@ class MainActivity : ComponentActivity() {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+
         return permissions.toTypedArray()
     }
 
     fun checkPermissions(): Boolean {
         val requiredPermissions = getRequiredPermissions()
-        return requiredPermissions.all { permission ->
+        val runtimeGranted = requiredPermissions.all { permission ->
             ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+        }
+        val storageGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            true
+        }
+        return runtimeGranted && storageGranted
+    }
+
+    fun needsManageStoragePermission(): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()
+    }
+
+    fun requestManageStorage() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                data = Uri.parse("package:$packageName")
+            }
+            startActivity(intent)
         }
     }
 }
@@ -182,6 +208,31 @@ fun ServerScreen() {
                 }
             }
         )
+
+        if (activity.needsManageStoragePermission()) {
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Storage Access",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "File server needs access to device storage to browse files.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = { activity.requestManageStorage() }) {
+                        Text("Grant Storage Access")
+                    }
+                }
+            }
+        }
 
         ServerControlsCard(
             portText = portText,
@@ -377,20 +428,35 @@ fun ServerAddressCard(
 @Composable
 fun DeveloperInfoCard() {
     val context = LocalContext.current
-    
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
+            Text(
+                text = "Developer",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Anubhav Gain",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = "Security Software Engineer",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
             TextButton(
                 onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/zahidaz".toUri())
+                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/mranv".toUri())
                     context.startActivity(intent)
                 }
             ) {
-                Text("GitHub: XAHID")
+                Text("GitHub: mranv")
             }
         }
     }
