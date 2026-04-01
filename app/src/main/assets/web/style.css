@@ -131,6 +131,36 @@ body {
 .crumb-sep { color:var(--text3); margin:0 2px; }
 .crumb-cur { color:var(--text); font-weight:600; padding:2px 4px; }
 
+/* ━━ Upload progress bar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.upload-bar {
+    padding:8px 16px; background:var(--surface); border-bottom:1px solid var(--border);
+}
+.upload-bar-inner { display:flex; align-items:center; gap:12px; }
+.upload-bar-inner span { font-size:12px; color:var(--text2); white-space:nowrap; }
+.upload-progress { flex:1; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+.upload-progress-fill { height:100%; background:var(--accent); border-radius:2px; transition:width .3s; width:0; }
+
+/* ━━ Activity panel ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.activity-panel {
+    position:fixed; top:0; right:-340px; width:340px; height:100vh;
+    background:var(--surface); border-left:1px solid var(--border);
+    z-index:30; transition:right .25s; display:flex; flex-direction:column;
+    box-shadow:-4px 0 20px rgba(0,0,0,.5);
+}
+.activity-panel.open { right:0; }
+.activity-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); }
+.activity-header h3 { font-size:14px; font-weight:700; }
+.activity-list { flex:1; overflow-y:auto; padding:8px; }
+.activity-empty { text-align:center; color:var(--text3); font-size:12px; padding:24px; }
+.activity-item { display:flex; align-items:flex-start; gap:8px; padding:8px; border-radius:6px; font-size:12px; line-height:1.4; }
+.activity-item:hover { background:var(--surface2); }
+.activity-time { color:var(--text3); font-family:monospace; font-size:11px; flex-shrink:0; margin-top:1px; }
+.activity-icon { flex-shrink:0; font-size:12px; }
+.activity-msg { color:var(--text2); word-break:break-word; }
+.activity-success .activity-msg { color:var(--green); }
+.activity-error .activity-msg { color:var(--red); }
+.act-count { display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; font-size:10px; font-weight:700; background:var(--accent); color:#000; border-radius:99px; padding:0 4px; }
+
 /* ━━ Drop zone ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .drop-zone {
     position:fixed; inset:0; z-index:50;
@@ -226,6 +256,7 @@ th.c-act { text-align:right; }
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 .toast-error { border-color:#f8717133; color:var(--red); }
+.toast-success { border-color:#34d39933; color:var(--green); }
 
 /* ━━ Index page ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .container { max-width:500px; margin:80px auto; padding:24px; text-align:center; }
