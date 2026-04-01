@@ -15,7 +15,6 @@ import io.ktor.http.HttpStatusCode.Companion.Conflict
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.content.PartData
-import io.ktor.http.content.forEachPart
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -271,20 +270,27 @@ fun Application.configureRouting() {
                 }
 
                 val uploadedFiles = mutableListOf<String>()
-                val multipart = call.receiveMultipart()
 
-                multipart.forEachPart { part ->
-                    when (part) {
-                        is PartData.FileItem -> {
+                try {
+                    val multipart = call.receiveMultipart()
+                    var part = multipart.readPart()
+                    while (part != null) {
+                        if (part is PartData.FileItem) {
                             val fileName = part.originalFileName ?: "uploaded_file"
                             val file = File(targetDir, fileName)
                             val bytes = part.provider().toByteArray()
                             file.writeBytes(bytes)
                             uploadedFiles.add(fileName)
                         }
-                        else -> {}
+                        part.dispose()
+                        part = multipart.readPart()
                     }
-                    part.dispose()
+                } catch (e: Exception) {
+                    call.respond(
+                        InternalServerError,
+                        Failure(error = "Upload failed: ${e::class.simpleName}: ${e.message}")
+                    )
+                    return@post
                 }
 
                 call.respond(
